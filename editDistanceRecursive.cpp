@@ -20,9 +20,9 @@ int editDistanceRecursive(string S, string T, int m, int n) {
 }
 
 int main() {
-    //test case Texto: https://www.gutenberg.org/cache/epub/76146/pg76146.txt
-    string s1 = "It is a pleasant duty to repeat my thanks to many friends who have helped me in various ways.";
-    string s2 = "Dr Kidston generously and without reserve allowed me access to his splendid collection of Palaeozoic plants";
+    //test case Texto: https://www.gutenberg.org/cache/epub/76146/pg76146.txts
+    string s1 = "It is a";
+    string s2 = "Dr Kidston generously";
     cout << editDistanceRecursive(s1, s2, s1.length(), s2.length()) << endl;
     return 0;
 }
