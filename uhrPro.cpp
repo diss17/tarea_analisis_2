@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <windows.h>
-#include <psapi.h> // Necesario para obtener información de memoria
+#include <psapi.h> 
 
 #include "utils.cpp"
 #include "EDMemo.cpp"
@@ -14,19 +14,16 @@
 #include "EDDpO.cpp"
 #include "EDRecursivo.cpp"
 
-
-// Función para obtener el uso de memoria en kilobytes en Windows
 std::int64_t get_memory_usage()
 {
     PROCESS_MEMORY_COUNTERS pmc;
     if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
     {
-        return pmc.PeakWorkingSetSize / 1024; // Devuelve el uso máximo de memoria en KB
+        return pmc.PeakWorkingSetSize / 1024; 
     }
-    return 0; // Si falla, devuelve 0
+    return 0; 
 }
 
-// Función para leer un texto desde un archivo y omitir la primera línea
 std::string read_text_from_file(const std::string &file_path)
 {
     std::ifstream file(file_path);
@@ -42,16 +39,15 @@ std::string read_text_from_file(const std::string &file_path)
     {
         if (first_line)
         {
-            first_line = false; // Ignorar la primera línea
+            first_line = false; 
             continue;
         }
-        text += line + "\n"; // Concatenar el resto del texto
+        text += line + "\n";
     }
     file.close();
     return text;
 }
 
-// Función para ejecutar un algoritmo y registrar tiempos y memoria
 template <typename Func>
 void run_experiment(const std::string &algorithm_name, Func func, const std::string &str1, const std::string &str2, std::int64_t runs, const std::string &output_file)
 {
@@ -66,14 +62,13 @@ void run_experiment(const std::string &algorithm_name, Func func, const std::str
     for (std::int64_t i = 0; i < runs; i++)
     {
         begin_time = std::chrono::high_resolution_clock::now();
-        func(str1, str2); // Ejecuta el algoritmo
+        func(str1, str2);
         end_time = std::chrono::high_resolution_clock::now();
 
         elapsed_time = end_time - begin_time;
         times[i] = elapsed_time.count();
         mean_time += times[i];
 
-        // Actualiza el peak de memoria
         peak_memory = std::max(peak_memory, get_memory_usage());
     }
 
@@ -88,10 +83,9 @@ void run_experiment(const std::string &algorithm_name, Func func, const std::str
     time_stdev /= runs - 1;
     time_stdev = std::sqrt(time_stdev);
 
-    // Escribir resultados en el archivo CSV
-    std::ofstream time_data(output_file, std::ios::app); // Abrir en modo append para múltiples combinaciones
+    std::ofstream time_data(output_file, std::ios::app); 
     if (time_data.tellp() == 0)
-    { // Si el archivo está vacío, escribe el encabezado
+    { 
         time_data << "n,mean_time,time_stdev,peak_memory_kb,text1_size,text2_size" << std::endl;
     }
     time_data << runs << "," << mean_time << "," << time_stdev << "," << peak_memory << "," << str1.size() << "," << str2.size() << std::endl;
@@ -103,31 +97,24 @@ void run_experiment(const std::string &algorithm_name, Func func, const std::str
 
 int main(int argc, char *argv[])
 {
-    // Validate and sanitize input
     std::int64_t runs;
     validate_input(argc, argv, runs);
 
-    // Leer los textos desde archivos
-    std::string text1 = read_text_from_file("test1.txt");
-    std::string text2 = read_text_from_file("test2.txt");
-    std::string text3 = read_text_from_file("test3.txt");
-    std::string text4 = read_text_from_file("test4.txt");
+    std::string text1 = read_text_from_file("Extract1.txt");
+    std::string text2 = read_text_from_file("Extract2.txt");
+    std::string text3 = read_text_from_file("Extract3.txt");
+    std::string text4 = read_text_from_file("Extract4.txt");
 
     std::vector<std::pair<std::string, std::string>> text_combinations = {
         {text1, text2}, {text1, text3}, {text1, text4}, {text2, text3}, {text2, text4}, {text3, text4}, {text2, text1}, {text3, text1}, {text4, text1}, {text3, text2}, {text4, text2}, {text4, text3}};
 
-    // Run experiments for each algorithm and combination
     for (std::size_t i = 0; i < text_combinations.size(); i++)
     {
         const std::string &str1 = text_combinations[i].first;
         const std::string &str2 = text_combinations[i].second;
 
+        //Para medir tiempo se pueden dejar todos los algoritmos a la vez, pero para medir memoria se debe hacer solo de uno en uno.
         std::cerr << "Processing combination " << i + 1 << " of " << text_combinations.size() << std::endl;
-
-        run_experiment("EDRecursivo", [](const std::string &s1, const std::string &s2)
-                       { return editDistanceRecursive(s1, s2, s1.length(), s2.length()); }, str1, str2, runs, "results_EDRecursivo.csv");
-
-        std::cerr << "Finished EDRecursivo for combination " << i + 1 << std::endl;
 
         run_experiment("EDMemo", [](const std::string &s1, const std::string &s2)
                        { return editDistanceMemo(s1, s2); }, str1, str2, runs, "results_EDMemo.csv");
