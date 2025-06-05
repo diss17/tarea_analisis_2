@@ -22,10 +22,10 @@ edrec_data = edrec_data.dropna(subset=["mean_time"])  #
 combinations = [f"Comb {i+1}" for i in range(len(edmemo_data))]
 
 # Convertir de nanosegundos a milisegundos
-edmemo_times = edmemo_data["mean_time"] / 1e6
-eddp_times = eddp_data["mean_time"] / 1e6
-eddpo_times = eddpo_data["mean_time"] / 1e6
-edrec_times = edrec_data["mean_time"] / 1e6  # 
+edmemo_times = edmemo_data["mean_time"] 
+eddp_times = eddp_data["mean_time"]
+eddpo_times = eddpo_data["mean_time"] 
+edrec_times = edrec_data["mean_time"] 
 
 x = np.arange(len(combinations))
 width = 0.2  # Reducido para acomodar 4 barras

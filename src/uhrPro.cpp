@@ -8,6 +8,8 @@
 #include <algorithm> // para std::min
 #include <windows.h>
 #include <psapi.h>
+#include <atomic>
+#include <thread>
 
 #include "utils.cpp"
 #include "EDMemo.cpp"
@@ -89,7 +91,48 @@ void validate_input(int argc, char *argv[], std::int64_t &runs, std::size_t &max
     }
 }
 
-//mide solo tiempo
+// Función para medir pico de memoria mientras la función se ejecuta
+template <typename Func>
+void run_memory_experiment(const std::string &algorithm_name, Func func, const std::string &str1, const std::string &str2, std::int64_t runs, const std::string &output_file)
+{
+    std::int64_t peak_memory_overall = 0;
+
+    for (std::int64_t i = 0; i < runs; i++)
+    {
+        std::atomic<bool> running(true);
+        std::int64_t peak_memory = 0;
+
+        // Hilo que monitorea la memoria periódicamente
+        std::thread monitor([&]() {
+            while (running)
+            {
+                std::int64_t current_mem = get_memory_usage();
+                peak_memory = std::max(peak_memory, current_mem);
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        });
+
+        func(str1, str2);  // Ejecuta la función a medir
+
+        running = false;    // Señal para terminar el hilo monitor
+        monitor.join();     // Espera a que el hilo termine
+
+        peak_memory_overall = std::max(peak_memory_overall, peak_memory);
+    }
+
+    std::ofstream mem_data(output_file, std::ios::app);
+    if (mem_data.tellp() == 0)
+    {
+        mem_data << "n,peak_memory_kb,text1_size,text2_size" << std::endl;
+    }
+    mem_data << runs << "," << peak_memory_overall << "," << str1.size() << "," << str2.size() << std::endl;
+
+    std::cerr << algorithm_name << " - Peak memory observed: " << peak_memory_overall << " KB" << std::endl;
+
+    mem_data.close();
+}
+
+// Función para medir solo tiempo
 template <typename Func>
 void run_time_experiment(const std::string &algorithm_name, Func func, const std::string &str1, const std::string &str2, std::int64_t runs, const std::string &output_file)
 {
@@ -128,32 +171,6 @@ void run_time_experiment(const std::string &algorithm_name, Func func, const std
     std::cerr << algorithm_name << " - Mean time: " << mean_time << " ns, StdDev: " << time_stdev << " ns" << std::endl;
 
     time_data.close();
-}
-
-//mide memoria
-template <typename Func>
-void run_memory_experiment(const std::string &algorithm_name, Func func, const std::string &str1, const std::string &str2, std::int64_t runs, const std::string &output_file)
-{
-    std::int64_t peak_memory = 0;
-
-    for (std::int64_t i = 0; i < runs; i++)
-    {
-        std::int64_t mem_before = get_memory_usage();
-        func(str1, str2);
-        std::int64_t mem_after = get_memory_usage();
-        peak_memory = std::max(peak_memory, mem_after - mem_before);
-    }
-
-    std::ofstream mem_data(output_file, std::ios::app);
-    if (mem_data.tellp() == 0)
-    {
-        mem_data << "n,peak_memory_kb,text1_size,text2_size" << std::endl;
-    }
-    mem_data << runs << "," << peak_memory << "," << str1.size() << "," << str2.size() << std::endl;
-
-    std::cerr << algorithm_name << " - Peak memory increase: " << peak_memory << " KB" << std::endl;
-
-    mem_data.close();
 }
 
 int main(int argc, char *argv[])
